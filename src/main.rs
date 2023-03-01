@@ -43,12 +43,10 @@ impl Search for Google {
                 .unwrap()
                 .value()
                 .attr("href")
-                .unwrap()
-                .to_string();
-            let url = self.get_target_url(&url);
+                .unwrap();
             SearchResult {
                 title: texts[0].to_string(),
-                url: url,
+                url: self.get_target_url(&url),
                 description: texts[2].to_string(),
             }
         });
@@ -105,6 +103,8 @@ async fn main() {
         for query in queries.iter().enumerate() {
             let results = engine.search(query.1).await.unwrap();
             if save_results {
+                let json = serde_json::to_string(&results).unwrap();
+
                 let mut file = std::fs::File::create(format!(
                     "SE_{}_{}_{}.json",
                     engine.name(),
@@ -112,16 +112,11 @@ async fn main() {
                     student_id
                 ))
                 .unwrap();
-
-                let json = serde_json::to_string(&results).unwrap();
                 file.write_all(json.as_bytes()).unwrap();
 
-                // create folder to store the results website data (html or pdf)
                 let result_folder = "results_websites_data";
-
                 std::fs::create_dir_all(result_folder).unwrap();
 
-                // download the results websites data
                 for result in results.iter().enumerate() {
                     let res = reqwest::get(&result.1.url).await.unwrap();
 
@@ -133,8 +128,8 @@ async fn main() {
                         },
                     };
 
-                    let req_res = res.text().await.unwrap();
-                    let filename = format!(
+                    let req_res = res.bytes().await.unwrap();
+                    let mut file = std::fs::File::create(format!(
                         "{}/TP_{}_{}_{}_{}.{}",
                         result_folder,
                         engine.name(),
@@ -142,10 +137,9 @@ async fn main() {
                         result.0 + 1,
                         student_id,
                         filetype
-                    );
-                    println!("filename: {}", filename);
-                    let mut file = std::fs::File::create(filename).unwrap();
-                    file.write_all(req_res.as_bytes()).unwrap();
+                    ))
+                    .unwrap();
+                    file.write_all(&req_res).unwrap();
                     println!("[{}] Retrieved {}", engine.name(), result.1.url);
                 }
             }
