@@ -23,10 +23,12 @@ struct Google;
 #[async_trait]
 impl Search for Google {
     async fn search(&self, query: &str) -> Result<Vec<SearchResult>> {
-        /*let req_res = reqwest::get(format!("https://www.google.com/search?q={}", query))
-        .await?
-        .text()
-        .await?; */
+        let req_res = reqwest::get(format!("https://www.google.com/search?q={}", query))
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap();
 
         let req_res = std::fs::read_to_string("cachegoogle.html").unwrap();
 
@@ -46,7 +48,7 @@ impl Search for Google {
                 .unwrap();
             SearchResult {
                 title: texts[0].to_string(),
-                url: self.get_target_url(&url),
+                url: get_target_url(url),
                 description: texts[2].to_string(),
             }
         });
@@ -60,14 +62,12 @@ impl Search for Google {
     }
 }
 
-impl Google {
-    fn get_target_url(&self, url: &str) -> String {
-        if url.starts_with("/url?q=") {
-            url.chars().skip(7).take_while(|x| *x != '&').collect()
-        } else {
-            url.to_string()
-        }
-    }
+fn get_target_url(url: &str) -> String {
+	if url.starts_with("/url?q=") {
+		url.chars().skip(7).take_while(|x| *x != '&').collect()
+	} else {
+		url.to_string()
+	}
 }
 
 struct Bing;
@@ -75,13 +75,36 @@ struct Bing;
 #[async_trait]
 impl Search for Bing {
     async fn search(&self, query: &str) -> Result<Vec<SearchResult>> {
-        Ok(vec![{
+        let req_res = reqwest::get(format!("https://www.bing.com/search?q={}", query))
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap();
+
+        let doc = Html::parse_document(&req_res);
+        let sel = Selector::parse("li.b_algo").unwrap();
+
+        let results = doc.select(&sel).take(10);
+
+        let results_text = results.map(|x| {
+            let des_sel = x.select(&Selector::parse("p").unwrap()).next().unwrap();
+
+            let link = x
+                .select(&Selector::parse("a").unwrap())
+                .next()
+                .unwrap();
+
+			let description = des_sel.text().skip(1).collect::<Vec<_>>().join(" ");
+            let url = link.value().attr("href").unwrap();
+			let title = link.text().collect::<Vec<_>>()[0].to_string();
             SearchResult {
-                title: "Bing".to_string(),
-                url: "https://www.bing.com".to_string(),
-                description: "Bing is a search engine".to_string(),
+                title: title,
+                url: get_target_url(url),
+                description: description,
             }
-        }])
+        });
+		Ok(results_text.collect())
     }
 
     fn name(&self) -> String {
@@ -93,10 +116,10 @@ impl Search for Bing {
 async fn main() {
     let save_results = env::args().nth(1).unwrap_or("false".to_string()) == "save";
     let student_id = env::var("STUDENT_ID").unwrap_or_else(|_x| "anonymous".to_string());
-    let google = Google;
+    //let google = Google;
     let bing = Bing;
 
-    let search_engines: Vec<Box<dyn Search>> = vec![Box::new(google), Box::new(bing)];
+    let search_engines: Vec<Box<dyn Search>> = vec![Box::new(bing)];
     let queries = vec!["tsinghua best courses"];
 
     for engine in search_engines {
