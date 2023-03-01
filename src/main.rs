@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use scraper::{Html, Selector};
-use std::{env};
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
+use std::env;
 use std::io::Write;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -33,7 +33,7 @@ impl Search for Google {
         let doc = Html::parse_document(&req_res);
         let sel = Selector::parse("div.Gx5Zad.fP1Qef.xpd.EtOod.pkphOe").unwrap();
 
-        let results = doc.select(&sel).take(4);
+        let results = doc.select(&sel).take(10);
 
         let results_text = results.map(|x| {
             let texts = x.text().collect::<Vec<_>>();
@@ -94,7 +94,7 @@ impl Search for Bing {
 #[tokio::main]
 async fn main() {
     let save_results = env::args().nth(1).unwrap_or("false".to_string()) == "save";
-    let student_id = env::var("STUDENT_ID").unwrap_or_else(|x| "anonymous".to_string());
+    let student_id = env::var("STUDENT_ID").unwrap_or_else(|_x| "anonymous".to_string());
     let google = Google;
     let bing = Bing;
 
@@ -115,6 +115,39 @@ async fn main() {
 
                 let json = serde_json::to_string(&results).unwrap();
                 file.write_all(json.as_bytes()).unwrap();
+
+                // create folder to store the results website data (html or pdf)
+                let result_folder = "results_websites_data";
+
+                std::fs::create_dir_all(result_folder).unwrap();
+
+                // download the results websites data
+                for result in results.iter().enumerate() {
+                    let res = reqwest::get(&result.1.url).await.unwrap();
+
+                    let filetype = match res.headers().get("content-type") {
+                        None => "html",
+                        Some(x) => match x.to_str() {
+                            Ok("application/pdf") => "pdf",
+                            _ => "html",
+                        },
+                    };
+
+                    let req_res = res.text().await.unwrap();
+                    let filename = format!(
+                        "{}/TP_{}_{}_{}_{}.{}",
+                        result_folder,
+                        engine.name(),
+                        query.0 + 1,
+                        result.0 + 1,
+                        student_id,
+                        filetype
+                    );
+                    println!("filename: {}", filename);
+                    let mut file = std::fs::File::create(filename).unwrap();
+                    file.write_all(req_res.as_bytes()).unwrap();
+                    println!("[{}] Retrieved {}", engine.name(), result.1.url);
+                }
             }
             for result in results {
                 println!("{:?}", result);
