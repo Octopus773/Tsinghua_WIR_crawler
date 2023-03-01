@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use scraper::{Html, Selector};
 use reqwest::Error;
+use scraper::{Html, Selector};
 
 #[derive(Debug)]
 struct SearchResult {
@@ -19,29 +19,47 @@ struct Google;
 impl Search for Google {
     async fn search(&self, query: &str) -> Result<Vec<SearchResult>, Error> {
         /*let req_res = reqwest::get(format!("https://www.google.com/search?q={}", query))
-            .await?
-            .text()
-            .await?; */
+        .await?
+        .text()
+        .await?; */
 
-        let req_res = std::fs::read_to_string("cachegoogle").unwrap();
+        let req_res = std::fs::read_to_string("cachegoogle.html").unwrap();
 
+        let doc = Html::parse_document(&req_res);
+        let sel = Selector::parse("div.Gx5Zad.fP1Qef.xpd.EtOod.pkphOe").unwrap();
 
+        let results = doc.select(&sel).take(4);
 
-        // parse the google search page and return results and skip ads
-        let results: Vec<String> = Html::parse_document(&req_res)
-            .select(&Selector::parse("div.MjjYud").unwrap())
-            .map(|x| x.text().collect::<Vec<_>>().join(""))
-            //.map(|x| x.select(&Selector::parse("a").unwrap()).next().unwrap())
-            //.map(|x| x.value().attr("href").unwrap().to_string())
-            .collect();
-        
-        Ok(results.iter().map(|x| {
+        let results_text = results.map(|x| {
+            let texts = x.text().collect::<Vec<_>>();
+            let url = x
+                .select(&Selector::parse("a").unwrap())
+                .next()
+                .unwrap()
+                .value()
+                .attr("href")
+                .unwrap()
+                .to_string();
+            let url = self.get_target_url(&url);
             SearchResult {
-                title: x.to_string(),
-                url: "".to_string(),
-                description: "".to_string(),
+                title: texts[0].to_string(),
+                url: url,
+                description: texts[2].to_string(),
             }
-        }).collect())
+        });
+
+        let ret = results_text.collect();
+        Ok(ret)
+    }
+}
+
+impl Google {
+    fn get_target_url(&self, url: &str) -> String {
+        if (url.starts_with("/url?q")) {
+            url.chars().skip(7).take_while(|x| *x != '&').collect()
+        } else {
+            url.to_string()
+        }
     }
 }
 
@@ -60,7 +78,6 @@ impl Search for Bing {
     }
 }
 
-
 #[tokio::main]
 async fn main() {
     let google = Google;
@@ -68,9 +85,10 @@ async fn main() {
 
     let search_engines: Vec<Box<dyn Search>> = vec![Box::new(google), Box::new(bing)];
 
-
     for engine in search_engines {
         let results = engine.search("tsinghua best courses").await.unwrap();
-        println!("{:?}", results);
+        for result in results {
+            println!("{:?}", result);
+        }
     }
 }
