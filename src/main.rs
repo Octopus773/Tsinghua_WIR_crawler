@@ -1,8 +1,11 @@
 use async_trait::async_trait;
-use reqwest::Error;
 use scraper::{Html, Selector};
+use std::{env};
+use serde::{Deserialize, Serialize};
+use serde_json::Result;
+use std::io::Write;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct SearchResult {
     title: String,
     url: String,
@@ -11,13 +14,15 @@ struct SearchResult {
 
 #[async_trait]
 trait Search {
-    async fn search(&self, query: &str) -> Result<Vec<SearchResult>, Error>;
+    async fn search(&self, query: &str) -> Result<Vec<SearchResult>>;
+
+    fn name(&self) -> String;
 }
 struct Google;
 
 #[async_trait]
 impl Search for Google {
-    async fn search(&self, query: &str) -> Result<Vec<SearchResult>, Error> {
+    async fn search(&self, query: &str) -> Result<Vec<SearchResult>> {
         /*let req_res = reqwest::get(format!("https://www.google.com/search?q={}", query))
         .await?
         .text()
@@ -51,11 +56,15 @@ impl Search for Google {
         let ret = results_text.collect();
         Ok(ret)
     }
+
+    fn name(&self) -> String {
+        "Google".to_string()
+    }
 }
 
 impl Google {
     fn get_target_url(&self, url: &str) -> String {
-        if (url.starts_with("/url?q")) {
+        if url.starts_with("/url?q=") {
             url.chars().skip(7).take_while(|x| *x != '&').collect()
         } else {
             url.to_string()
@@ -67,7 +76,7 @@ struct Bing;
 
 #[async_trait]
 impl Search for Bing {
-    async fn search(&self, query: &str) -> Result<Vec<SearchResult>, Error> {
+    async fn search(&self, query: &str) -> Result<Vec<SearchResult>> {
         Ok(vec![{
             SearchResult {
                 title: "Bing".to_string(),
@@ -76,19 +85,40 @@ impl Search for Bing {
             }
         }])
     }
+
+    fn name(&self) -> String {
+        "Bing".to_string()
+    }
 }
 
 #[tokio::main]
 async fn main() {
+    let save_results = env::args().nth(1).unwrap_or("false".to_string()) == "save";
+    let student_id = env::var("STUDENT_ID").unwrap_or_else(|x| "anonymous".to_string());
     let google = Google;
     let bing = Bing;
 
     let search_engines: Vec<Box<dyn Search>> = vec![Box::new(google), Box::new(bing)];
+    let queries = vec!["tsinghua best courses"];
 
     for engine in search_engines {
-        let results = engine.search("tsinghua best courses").await.unwrap();
-        for result in results {
-            println!("{:?}", result);
+        for query in queries.iter().enumerate() {
+            let results = engine.search(query.1).await.unwrap();
+            if save_results {
+                let mut file = std::fs::File::create(format!(
+                    "SE_{}_{}_{}.json",
+                    engine.name(),
+                    query.0 + 1,
+                    student_id
+                ))
+                .unwrap();
+
+                let json = serde_json::to_string(&results).unwrap();
+                file.write_all(json.as_bytes()).unwrap();
+            }
+            for result in results {
+                println!("{:?}", result);
+            }
         }
     }
 }
