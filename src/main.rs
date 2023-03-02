@@ -30,9 +30,6 @@ impl Search for Google {
             .await
             .unwrap();
 
-
-        //let req_res = std::fs::read_to_string("cachegoogle2.html").unwrap();
-
         let doc = Html::parse_document(&req_res);
         let sel = Selector::parse("div > div > a > div > div > h3").unwrap();
 
@@ -43,6 +40,7 @@ impl Search for Google {
             let x = ElementRef::wrap(x).unwrap();
 
             let texts = x.text().collect::<Vec<_>>();
+			println!("{:?}", texts);
             let url = x
                 .select(&Selector::parse("a").unwrap())
                 .next()
@@ -75,8 +73,7 @@ fn get_target_url(url: &str) -> String {
 }
 
 async fn save_site_as_file(url: &str, filename: &str, auto_filetype: bool) {
-    let res = reqwest::get(url)
-	.await.unwrap();
+    let res = reqwest::get(url).await.unwrap();
     let filetype = match res.headers().get("content-type") {
         None => "html",
         Some(x) => match x.to_str() {
@@ -117,9 +114,16 @@ impl Search for Bing {
 
             let link = x.select(&Selector::parse("a").unwrap()).next().unwrap();
 
-            let description = des_sel.text().skip(1).collect::<Vec<_>>().join(" ");
+            let description = des_sel
+                .text()
+                .skip(1)
+                .collect::<Vec<_>>()
+                .iter()
+                .map(|x| x.trim())
+				.collect::<Vec<_>>()
+                .join(" ");
             let url = link.value().attr("href").unwrap();
-            let title = link.text().collect::<Vec<_>>()[0].to_string();
+            let title = link.text().collect::<Vec<_>>().join(" ");
             SearchResult {
                 title,
                 url: get_target_url(url),
@@ -142,7 +146,6 @@ async fn main() {
     let search_engines: Vec<Box<dyn Search>> = vec![Box::new(Google), Box::new(Bing)];
     let queries = vec!["stack overflow parse html with regex"];
 
-	
     for engine in search_engines {
         for query in queries.iter().enumerate() {
             let results = engine.search(query.1).await.unwrap();
@@ -179,9 +182,9 @@ async fn main() {
                 }
             }
 
-			println!("Results from {}, {}:", engine.name(), results.len());
-			println!("=========================");
-			println!("");
+            println!("Results from {}, {}:", engine.name(), results.len());
+            println!("=========================");
+            println!("");
             for result in results {
                 println!("{:?}", result);
             }
