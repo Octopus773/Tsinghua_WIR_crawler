@@ -1,5 +1,6 @@
 use crate::types::{Error, Search, SearchResult};
 use scraper::{ElementRef, Html, Selector};
+use reqwest::header::{USER_AGENT, ACCEPT_LANGUAGE};
 
 use async_trait::async_trait;
 
@@ -8,24 +9,35 @@ pub struct Google;
 #[async_trait]
 impl Search for Google {
     async fn search(&self, query: &str) -> Result<Vec<SearchResult>, Error> {
-        let req_res = reqwest::get(format!("https://www.google.com/search?q={}", query))
-            .await
-            .unwrap()
+        let http_client = reqwest::Client::new();
+        let req_res = http_client
+            .get(format!("https://www.google.com/search?q={}", query))
+            .header(USER_AGENT, "My Rust Program 1.0")
+            .header(ACCEPT_LANGUAGE, "en")
+            .send()
+            .await?
             .text()
-            .await
-            .unwrap();
+            .await?;
+
+        std::fs::write("cachegoogle2.html", &req_res).unwrap();
 
         //let req_res = std::fs::read_to_string("cachegoogle.html").unwrap();
 
         let doc = Html::parse_document(&req_res);
-        let sel = Selector::parse("div[lang] a h3").unwrap();
+        let sel = Selector::parse("a h3").unwrap();
 
         let results = doc.select(&sel).take(10);
 
         let results_text = results.map(|x| {
             let mut elem = x;
             while elem.value().name() != "div" || elem.value().attr("lang").is_none() {
-                elem = ElementRef::wrap(elem.parent().unwrap()).unwrap();
+                let p = elem.parent();
+                println!("{:?}", p);
+                if p.is_none() {
+                    elem = ElementRef::wrap(x.ancestors().nth(3).unwrap()).unwrap();
+                    break;
+                }
+                elem = ElementRef::wrap(p.unwrap()).unwrap();
             }
 
             let texts = elem.text().collect::<Vec<_>>();
