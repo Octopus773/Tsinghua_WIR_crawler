@@ -1,5 +1,6 @@
 
 use crate::types::{Search, SearchResult, Error};
+use reqwest::header::{USER_AGENT, ACCEPT_LANGUAGE};
 use scraper::{Html, Selector};
 
 use async_trait::async_trait;
@@ -9,7 +10,11 @@ pub struct Bing;
 #[async_trait]
 impl Search for Bing {
     async fn search(&self, query: &str) -> Result<Vec<SearchResult>, Error> {
-        let req_res = reqwest::get(format!("https://www.bing.com/search?q={}", query))
+        let http_client = reqwest::Client::new();
+        let req_res = http_client.get(format!("https://www.bing.com/search?q={}&count=20", query))
+            .header(USER_AGENT, "My Rust Program 1.0")
+            .header(ACCEPT_LANGUAGE, "en")
+            .send()
             .await
             .unwrap()
             .text()
@@ -36,7 +41,7 @@ impl Search for Bing {
             SearchResult {
                 title,
                 url: url.to_string(),
-                description,
+                description: Some(description),
             }
         });
         Ok(results_text.collect())

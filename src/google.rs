@@ -9,9 +9,9 @@ pub struct Google;
 #[async_trait]
 impl Search for Google {
     async fn search(&self, query: &str) -> Result<Vec<SearchResult>, Error> {
-        let http_client = reqwest::Client::new();
+        /*let http_client = reqwest::Client::new();
         let req_res = http_client
-            .get(format!("https://www.google.com/search?q={}", query))
+            .get(format!("https://www.google.com/search?q={}&num=20", query))
             .header(USER_AGENT, "My Rust Program 1.0")
             .header(ACCEPT_LANGUAGE, "en")
             .send()
@@ -19,9 +19,9 @@ impl Search for Google {
             .text()
             .await?;
 
-        std::fs::write("cachegoogle2.html", &req_res).unwrap();
+        std::fs::write("cachegoogle2.html", &req_res).unwrap();*/
 
-        //let req_res = std::fs::read_to_string("cachegoogle.html").unwrap();
+        let req_res = std::fs::read_to_string("cachegoogle2.html").unwrap();
 
         let doc = Html::parse_document(&req_res);
         let sel = Selector::parse("a h3").unwrap();
@@ -30,7 +30,9 @@ impl Search for Google {
 
         let results_text = results.map(|x| {
             let mut elem = x;
-            while elem.value().name() != "div" || elem.value().attr("lang").is_none() {
+            elem = ElementRef::wrap(x.ancestors().nth(3).unwrap()).unwrap();
+
+            while false && (elem.value().name() != "div" || elem.value().attr("lang").is_none()) {
                 let p = elem.parent();
                 println!("{:?}", p);
                 if p.is_none() {
@@ -49,9 +51,9 @@ impl Search for Google {
                 .attr("href")
                 .unwrap();
             SearchResult {
-                title: texts[0].to_string(),
+                title: x.text().collect::<Vec<_>>().join(""),
                 url: Google::get_target_url(url),
-                description: Google::get_description(texts),
+                description: None,  //Google::get_description(texts),
             }
         });
 

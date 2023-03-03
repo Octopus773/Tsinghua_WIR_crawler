@@ -1,15 +1,14 @@
-use scraper::{ElementRef, Html, Selector};
-use serde::{Deserialize, Serialize};
 use serde_json::Result;
-use std::env;
+use std::{env, process::exit};
 use std::io::Write;
 
 pub mod types;
 pub mod google;
 pub mod bing;
 
-use types::{Search, SearchResult, Error};
+use types::{Search, SearchResult, Error, QueryDescription};
 use google::Google;
+use bing::Bing;
 
 async fn save_site_as_file(url: &str, filename: &str, auto_filetype: bool) {
     let res = reqwest::get(url).await.unwrap();
@@ -34,15 +33,27 @@ async fn save_site_as_file(url: &str, filename: &str, auto_filetype: bool) {
 
 #[tokio::main]
 async fn main() {
-    let save_results = env::args().nth(1).unwrap_or("false".to_string()) == "save";
     let student_id = env::var("STUDENT_ID").unwrap_or_else(|_x| "anonymous".to_string());
+    let qd_file_path = env::args().nth(1).expect("Please provide a query description file");
+    let save_results = env::args().nth(2).unwrap_or("false".to_string()) == "save";
 
-    let search_engines: Vec<Box<dyn Search>> = vec![Box::new(Google)];
-    let queries = vec!["stack overflow parse html with regex"];
+    let search_engines: Vec<Box<dyn Search>> = vec![Box::new(Google), Box::new(Bing)];
+
+    let qd_file = std::fs::read_to_string(&qd_file_path).map_err(|e| {
+        println!("Failed reading {}: {}", &qd_file_path, e);
+        exit(1);
+    }).unwrap();
+
+    // print niely the error returned by serde
+    let queries: Vec<QueryDescription> = serde_json::from_str(&qd_file).map_err(|e| {
+        println!("Failed parsing {}: {}", &qd_file_path, e);
+        exit(1);
+    }).unwrap();
+
 
     for engine in search_engines {
         for query in queries.iter().enumerate() {
-            let results = engine.search(query.1).await.unwrap();
+            let results = engine.search(&query.1.query).await.unwrap();
             if save_results {
                 let json = serde_json::to_string(&results).unwrap();
 

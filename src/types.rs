@@ -35,7 +35,7 @@ impl std::error::Error for Error {}
 pub struct SearchResult {
     pub title: String,
     pub url: String,
-    pub description: String,
+    pub description: Option<String>,
 }
 
 #[async_trait]
@@ -43,4 +43,12 @@ pub trait Search {
     async fn search(&self, query: &str) -> Result<Vec<SearchResult>, Error>;
 
     fn name(&self) -> String;
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QueryDescription {
+    #[serde(rename = "queryNum")]
+    pub query_num: u32,
+    pub query: String,
+    pub description: String,
 }
