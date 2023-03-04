@@ -43,7 +43,6 @@ impl SearchEngine for Google {
 
             while elem.select(&Selector::parse("a h3").unwrap()).count() <= 1
              && elem.text().fold(0, |acc, a| acc + a.len()) < 600 {
-                println!("{} {}", elem.value().name(), elem.text().count());
                 let p = elem.parent();
                 prev_elem = elem;
                 elem = ElementRef::wrap(p.unwrap()).unwrap();
@@ -103,7 +102,6 @@ fn is_starting_translate_this_page(text: &str) -> bool {
 
 impl Google {
     fn get_description(texts: Vec<&str>) -> String {
-        println!("{:?}", texts);
         // first text is the title
         let texts = &texts[1..];
         let mut description = String::new();
@@ -111,7 +109,6 @@ impl Google {
         let mut adjusted_idx_base = 0;
 
         for (idx, text) in texts.iter().enumerate() {
-            println!("process {}", text);
             if do_continues > 0 {
                 do_continues -= 1;
                 continue;
@@ -136,7 +133,6 @@ impl Google {
                 continue;
             }
             if idx != adjusted_idx_base && !text.starts_with(" ") && texts[idx - 1].ends_with(".") {
-                println!("out {}", text);
                 break;
             }
             description.push_str(text);

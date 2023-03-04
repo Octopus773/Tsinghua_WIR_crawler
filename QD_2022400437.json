@@ -1,4 +1,4 @@
 [
-    {"queryNum": 1, "query": "Tsinghua best teachers", "description": "Want "},
+    {"queryNum": 1, "query": "Why is rust memory safe ?", "description": "I want to learn rust borrow checker"},
     {"queryNum": 2, "query": "Best current graphics card", "description": "I want to build a new computer"}
 ]
