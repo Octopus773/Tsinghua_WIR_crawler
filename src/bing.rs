@@ -31,17 +31,21 @@ impl SearchEngine for Bing {
         let results = doc.select(&sel).take(10);
 
         let results_text = results.map(|x| {
-            let des_sel = x.select(&Selector::parse("p").unwrap()).next().unwrap();
+            let des_sel = x.select(&Selector::parse("p").unwrap()).next();
 
             let link = x.select(&Selector::parse("a").unwrap()).next().unwrap();
 
-            let description = des_sel.text().skip(1).collect::<Vec<_>>().join("");
+            let description = match des_sel {
+                Some(desc) => Some(desc.text().skip(1).collect::<Vec<_>>().join("")),
+                // bing "richcards" are more complex to parse, so we skip them
+                None => None
+            };
             let url = link.value().attr("href").unwrap();
             let title = link.text().collect::<Vec<_>>().join(" ");
             SearchResult {
                 title,
                 url: url.to_string(),
-                description: Some(description),
+                description: description,
             }
         });
         Ok(results_text.collect())

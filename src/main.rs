@@ -34,7 +34,7 @@ async fn main() {
         })
         .unwrap();
 
-    for engine in search_engines {
+    for engine in &search_engines[1..] {
         for query in queries.iter() {
             let results = engine.search(&query.query, true).await.unwrap();
             println!("Results from {}, {}:", engine.name(), results.len());
