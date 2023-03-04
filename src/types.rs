@@ -39,8 +39,8 @@ pub struct SearchResult {
 }
 
 #[async_trait]
-pub trait Search {
-    async fn search(&self, query: &str) -> Result<Vec<SearchResult>, Error>;
+pub trait SearchEngine {
+    async fn search(&self, query: &str, save_html_page: bool) -> Result<Vec<SearchResult>, Error>;
 
     fn name(&self) -> String;
 }

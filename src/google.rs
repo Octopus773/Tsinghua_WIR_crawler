@@ -1,28 +1,28 @@
-use crate::types::{Error, Search, SearchResult};
+use crate::types::{Error, SearchEngine, SearchResult};
+use crate::utils::{APP_ACCEPT_LANGUAGE, APP_USER_AGENT};
+use reqwest::header::{ACCEPT_LANGUAGE, USER_AGENT};
 use scraper::{ElementRef, Html, Selector};
-use reqwest::header::{USER_AGENT, ACCEPT_LANGUAGE};
 
 use async_trait::async_trait;
 
 pub struct Google;
 
 #[async_trait]
-impl Search for Google {
-    async fn search(&self, query: &str) -> Result<Vec<SearchResult>, Error> {
+impl SearchEngine for Google {
+    async fn search(&self, query: &str, save_html_page: bool) -> Result<Vec<SearchResult>, Error> {
         let http_client = reqwest::Client::new();
         let req_res = http_client
             .get(format!("https://www.google.com/search?q={}&num=20", query))
-            .header(USER_AGENT, "My Rust Program 1.0")
-            .header(ACCEPT_LANGUAGE, "en")
+            .header(USER_AGENT, APP_USER_AGENT)
+            .header(ACCEPT_LANGUAGE, APP_ACCEPT_LANGUAGE)
             .send()
             .await?
             .text()
             .await?;
 
-        //std::fs::write("cachegoogle2.html", &req_res).unwrap();
-
-        //let req_res = std::fs::read_to_string("cachegoogle2.html").unwrap();
-
+        if save_html_page {
+            std::fs::write("google.html", &req_res).unwrap();
+        }
         let doc = Html::parse_document(&req_res);
         let sel = Selector::parse("a h3").unwrap();
 
@@ -35,11 +35,7 @@ impl Search for Google {
                 let p = elem.parent();
                 elem = ElementRef::wrap(p.unwrap()).unwrap();
             }
-            let url = elem
-                .value()
-                .attr("href")
-                .unwrap();
-
+            let url = elem.value().attr("href").unwrap();
             let word_count_ref = elem.text().count();
 
             while elem.text().count() <= word_count_ref {
@@ -47,9 +43,7 @@ impl Search for Google {
                 let p = elem.parent();
                 elem = ElementRef::wrap(p.unwrap()).unwrap();
             }
-
             let texts = elem.text().collect::<Vec<_>>();
-
 
             SearchResult {
                 title: x.text().collect::<Vec<_>>().join(""),
@@ -58,8 +52,7 @@ impl Search for Google {
             }
         });
 
-        let ret = results_text.collect();
-        Ok(ret)
+        Ok(results_text.collect())
     }
 
     fn name(&self) -> String {
