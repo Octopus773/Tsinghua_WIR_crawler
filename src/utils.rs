@@ -36,7 +36,8 @@ pub async fn save_results_to_disk(
                 student_id
             ),
             true,
-        ).await;
+        )
+        .await;
     }
 }
 
@@ -46,9 +47,15 @@ pub async fn save_site_as_file(url: &str, filename: &str, auto_filetype: bool) {
         .get(url)
         .header(USER_AGENT, APP_USER_AGENT)
         .header(ACCEPT_LANGUAGE, APP_ACCEPT_LANGUAGE)
+        .timeout(std::time::Duration::from_secs(10))
         .send()
-        .await
-        .unwrap();
+        .await;
+
+    if res.is_err() {
+        println!("{}", res.err().unwrap());
+        return;
+    }
+    let res = res.unwrap();
     let filetype = match res.headers().get("content-type") {
         None => "html",
         Some(x) => match x.to_str() {

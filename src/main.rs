@@ -52,7 +52,8 @@ async fn main() {
                 query.query_num,
                 &student_id,
                 &results,
-            ).await;
+            )
+            .await;
         }
     }
 }
