@@ -30,6 +30,7 @@ impl SearchEngine for Google {
 
         let results_text = results.map(|x| {
             let mut elem = x;
+            let mut prev_elem = elem;
 
             while elem.value().name() != "a" {
                 let p = elem.parent();
@@ -40,14 +41,14 @@ impl SearchEngine for Google {
                 None => return None,
             };
 
-            let word_count_ref = elem.text().count();
-
-            while elem.text().count() <= word_count_ref {
+            while elem.select(&Selector::parse("a h3").unwrap()).count() <= 1
+             && elem.text().fold(0, |acc, a| acc + a.len()) < 600 {
                 println!("{} {}", elem.value().name(), elem.text().count());
                 let p = elem.parent();
+                prev_elem = elem;
                 elem = ElementRef::wrap(p.unwrap()).unwrap();
             }
-            let texts = elem.text().collect::<Vec<_>>();
+            let texts = prev_elem.text().collect::<Vec<_>>();
 
             Some(SearchResult {
                 title: x.text().collect::<Vec<_>>().join(""),
@@ -96,6 +97,10 @@ fn is_starting_url(text: &str) -> bool {
     is_base_domain(&tokens.next().unwrap())
 }
 
+fn is_starting_translate_this_page(text: &str) -> bool {
+    text == " · "
+}
+
 impl Google {
     fn get_description(texts: Vec<&str>) -> String {
         println!("{:?}", texts);
@@ -125,7 +130,11 @@ impl Google {
                 adjusted_idx_base = idx + 1;
                 continue;
             }
-
+            if is_starting_translate_this_page(text) {
+                do_continues = 1;
+                adjusted_idx_base = idx + 2;
+                continue;
+            }
             if idx != adjusted_idx_base && !text.starts_with(" ") && texts[idx - 1].ends_with(".") {
                 println!("out {}", text);
                 break;

@@ -1,4 +1,3 @@
-use serde_json::Result;
 use std::{env, process::exit};
 
 pub mod bing;
@@ -6,7 +5,7 @@ pub mod google;
 pub mod types;
 pub mod utils;
 
-use types::{Error, QueryDescription, SearchEngine, SearchResult};
+use types::{QueryDescription, SearchEngine};
 
 use bing::Bing;
 use google::Google;
@@ -34,7 +33,7 @@ async fn main() {
         })
         .unwrap();
 
-    for engine in &search_engines[1..] {
+    for engine in &search_engines {
         for query in queries.iter() {
             let results = engine.search(&query.query, true).await.unwrap();
             println!("Results from {}, {}:", engine.name(), results.len());
