@@ -49,6 +49,7 @@ async fn main() {
                         .as_ref()
                         .unwrap_or(&"No description found".to_string())
                 );
+                println!("");
             }
 
             if !save_results {
