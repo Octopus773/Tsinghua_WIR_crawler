@@ -1,4 +1,4 @@
 [
     {"queryNum": 1, "query": "Why is rust memory safe ?", "description": "I want to learn rust borrow checker"},
-    {"queryNum": 2, "query": "What is the differences between OpenGL and Vulkan", "description": "My new game is allowing me to choose between the two"}
+    {"queryNum": 2, "query": "What is Wayland and the main departures from X11 rendering", "description": "My new game is allowing me to choose between the two"}
 ]

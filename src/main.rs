@@ -40,7 +40,15 @@ async fn main() {
             println!("=========================");
             println!("");
             for result in &results {
-                println!("{:?}", result);
+                println!("Title: {:?}", &result.title);
+                println!("Url: {:?}", &result.url);
+                println!(
+                    "Description: {:?}",
+                    result
+                        .description
+                        .as_ref()
+                        .unwrap_or(&"No description found".to_string())
+                );
             }
 
             if !save_results {
