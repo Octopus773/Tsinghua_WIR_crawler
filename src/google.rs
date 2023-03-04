@@ -12,7 +12,7 @@ impl SearchEngine for Google {
     async fn search(&self, query: &str, save_html_page: bool) -> Result<Vec<SearchResult>, Error> {
         let http_client = reqwest::Client::new();
         let req_res = http_client
-            .get(format!("https://www.google.com/search?q={}&num=20", query))
+            .get(format!("https://www.google.com/search?q={}&num=20&lr=en&lr=en", query))
             .header(USER_AGENT, APP_USER_AGENT)
             .header(ACCEPT_LANGUAGE, APP_ACCEPT_LANGUAGE)
             .send()
@@ -26,7 +26,7 @@ impl SearchEngine for Google {
         let doc = Html::parse_document(&req_res);
         let sel = Selector::parse("a h3").unwrap();
 
-        let results = doc.select(&sel).take(10);
+        let results = doc.select(&sel).take(13);
 
         let results_text = results.map(|x| {
             let mut elem = x;
@@ -35,7 +35,11 @@ impl SearchEngine for Google {
                 let p = elem.parent();
                 elem = ElementRef::wrap(p.unwrap()).unwrap();
             }
-            let url = elem.value().attr("href").unwrap();
+            let url = match Google::get_target_url(elem.value().attr("href").unwrap()) {
+                Some(url) => url,
+                None => return None,
+            };
+
             let word_count_ref = elem.text().count();
 
             while elem.text().count() <= word_count_ref {
@@ -45,14 +49,18 @@ impl SearchEngine for Google {
             }
             let texts = elem.text().collect::<Vec<_>>();
 
-            SearchResult {
+            Some(SearchResult {
                 title: x.text().collect::<Vec<_>>().join(""),
-                url: Google::get_target_url(url),
+                url,
                 description: Some(Google::get_description(texts)),
-            }
+            })
         });
 
-        Ok(results_text.collect())
+        Ok(results_text
+            .filter(|x| x.is_some())
+            .take(10)
+            .map(|x| x.unwrap())
+            .collect())
     }
 
     fn name(&self) -> String {
@@ -127,11 +135,15 @@ impl Google {
         description
     }
 
-    fn get_target_url(url: &str) -> String {
+    fn get_target_url(url: &str) -> Option<String> {
         if url.starts_with("/url?q=") {
-            url.chars().skip(7).take_while(|x| *x != '&').collect()
+            Some(url.chars().skip(7).take_while(|x| *x != '&').collect())
+        } else if url.starts_with("/") {
+            // links going to google.com
+            // ex "similar image" results have the same semantics as "related" results
+            None
         } else {
-            url.to_string()
+            Some(url.to_string())
         }
     }
 }
