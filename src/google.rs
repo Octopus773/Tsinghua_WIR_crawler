@@ -9,7 +9,7 @@ pub struct Google;
 #[async_trait]
 impl Search for Google {
     async fn search(&self, query: &str) -> Result<Vec<SearchResult>, Error> {
-        /*let http_client = reqwest::Client::new();
+        let http_client = reqwest::Client::new();
         let req_res = http_client
             .get(format!("https://www.google.com/search?q={}&num=20", query))
             .header(USER_AGENT, "My Rust Program 1.0")
@@ -19,9 +19,9 @@ impl Search for Google {
             .text()
             .await?;
 
-        std::fs::write("cachegoogle2.html", &req_res).unwrap();*/
+        //std::fs::write("cachegoogle2.html", &req_res).unwrap();
 
-        let req_res = std::fs::read_to_string("cachegoogle2.html").unwrap();
+        //let req_res = std::fs::read_to_string("cachegoogle2.html").unwrap();
 
         let doc = Html::parse_document(&req_res);
         let sel = Selector::parse("a h3").unwrap();
@@ -30,30 +30,31 @@ impl Search for Google {
 
         let results_text = results.map(|x| {
             let mut elem = x;
-            elem = ElementRef::wrap(x.ancestors().nth(3).unwrap()).unwrap();
 
-            while false && (elem.value().name() != "div" || elem.value().attr("lang").is_none()) {
+            while elem.value().name() != "a" {
                 let p = elem.parent();
-                println!("{:?}", p);
-                if p.is_none() {
-                    elem = ElementRef::wrap(x.ancestors().nth(3).unwrap()).unwrap();
-                    break;
-                }
+                elem = ElementRef::wrap(p.unwrap()).unwrap();
+            }
+            let url = elem
+                .value()
+                .attr("href")
+                .unwrap();
+
+            let word_count_ref = elem.text().count();
+
+            while elem.text().count() <= word_count_ref {
+                println!("{} {}", elem.value().name(), elem.text().count());
+                let p = elem.parent();
                 elem = ElementRef::wrap(p.unwrap()).unwrap();
             }
 
             let texts = elem.text().collect::<Vec<_>>();
-            let url = elem
-                .select(&Selector::parse("a").unwrap())
-                .next()
-                .unwrap()
-                .value()
-                .attr("href")
-                .unwrap();
+
+
             SearchResult {
                 title: x.text().collect::<Vec<_>>().join(""),
                 url: Google::get_target_url(url),
-                description: None,  //Google::get_description(texts),
+                description: Some(Google::get_description(texts)),
             }
         });
 
@@ -67,9 +68,11 @@ impl Search for Google {
 }
 
 fn is_base_domain(text: &str) -> bool {
+    //  https://stackoverflow.com
+    //  stackoverflow.com
     text.contains(".")
-        && (text.starts_with("http://") || text.starts_with("https://"))
-        && text.matches("/").count() == 2
+        || (text.starts_with("http://") || text.starts_with("https://"))
+        || text.matches("/").count() == 2
 }
 
 fn is_url_representation(text: &str) -> bool {
@@ -82,6 +85,14 @@ fn is_combo_url(texts: &[&str], idx: usize) -> bool {
 
 fn is_combo_title_and_url(texts: &[&str], idx: usize) -> bool {
     texts.len() > idx + 2 && is_combo_url(texts, idx + 1)
+}
+
+fn is_starting_url(text: &str) -> bool {
+    if text.matches(" › ").count() == 0 {
+        return false;
+    }
+    let mut tokens = text.split(" › ");
+    is_base_domain(&tokens.next().unwrap())
 }
 
 impl Google {
@@ -107,6 +118,10 @@ impl Google {
             if is_combo_url(texts, idx) {
                 do_continues = 1;
                 adjusted_idx_base = idx + 2;
+                continue;
+            }
+            if is_starting_url(text) {
+                adjusted_idx_base = idx + 1;
                 continue;
             }
 

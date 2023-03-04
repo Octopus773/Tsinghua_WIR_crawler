@@ -33,11 +33,11 @@ async fn save_site_as_file(url: &str, filename: &str, auto_filetype: bool) {
 
 #[tokio::main]
 async fn main() {
-    let student_id = env::var("STUDENT_ID").unwrap_or_else(|_x| "anonymous".to_string());
+    let student_id = env::var("STUDENT_ID").unwrap_or_else(|_x| "2022400437".to_string());
     let qd_file_path = env::args().nth(1).expect("Please provide a query description file");
     let save_results = env::args().nth(2).unwrap_or("false".to_string()) == "save";
 
-    let search_engines: Vec<Box<dyn Search>> = vec![Box::new(Google), Box::new(Bing)];
+    let search_engines: Vec<Box<dyn Search>> = vec![Box::new(Google)];
 
     let qd_file = std::fs::read_to_string(&qd_file_path).map_err(|e| {
         println!("Failed reading {}: {}", &qd_file_path, e);
@@ -52,15 +52,15 @@ async fn main() {
 
 
     for engine in search_engines {
-        for query in queries.iter().enumerate() {
-            let results = engine.search(&query.1.query).await.unwrap();
+        for query in queries.iter() {
+            let results = engine.search(&query.query).await.unwrap();
             if save_results {
                 let json = serde_json::to_string(&results).unwrap();
 
                 let mut file = std::fs::File::create(format!(
                     "SE_{}_{}_{}.json",
                     engine.name(),
-                    query.0 + 1,
+                    query.query_num,
                     student_id
                 ))
                 .unwrap();
@@ -73,10 +73,10 @@ async fn main() {
                     save_site_as_file(
                         &result.url,
                         &format!(
-                            "{}/SE_{}_{}_{}_{}",
+                            "{}/TP_{}_{}_{}_{}",
                             result_folder,
                             engine.name(),
-                            query.0 + 1,
+                            query.query_num,
                             idx + 1,
                             student_id
                         ),
