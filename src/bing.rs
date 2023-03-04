@@ -23,7 +23,7 @@ impl SearchEngine for Bing {
             .unwrap();
 
         if save_html_page {
-            std::fs::write("bing.html", &req_res).unwrap();
+            std::fs::write(format!("bing ({}).html", query), &req_res).unwrap();
         }
         let doc = Html::parse_document(&req_res);
         let sel = Selector::parse("li.b_algo").unwrap();

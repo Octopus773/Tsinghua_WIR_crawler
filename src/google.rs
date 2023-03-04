@@ -12,7 +12,10 @@ impl SearchEngine for Google {
     async fn search(&self, query: &str, save_html_page: bool) -> Result<Vec<SearchResult>, Error> {
         let http_client = reqwest::Client::new();
         let req_res = http_client
-            .get(format!("https://www.google.com/search?q={}&num=20&lr=en&lr=en", query))
+            .get(format!(
+                "https://www.google.com/search?q={}&num=20&lr=en&lr=en",
+                query
+            ))
             .header(USER_AGENT, APP_USER_AGENT)
             .header(ACCEPT_LANGUAGE, APP_ACCEPT_LANGUAGE)
             .send()
@@ -21,7 +24,7 @@ impl SearchEngine for Google {
             .await?;
 
         if save_html_page {
-            std::fs::write("google.html", &req_res).unwrap();
+            std::fs::write(format!("google ({}).html", query), &req_res).unwrap();
         }
         let doc = Html::parse_document(&req_res);
         let sel = Selector::parse("a h3").unwrap();
@@ -42,7 +45,8 @@ impl SearchEngine for Google {
             };
 
             while elem.select(&Selector::parse("a h3").unwrap()).count() <= 1
-             && elem.text().fold(0, |acc, a| acc + a.len()) < 600 {
+                && elem.text().fold(0, |acc, a| acc + a.len()) < 600
+            {
                 let p = elem.parent();
                 prev_elem = elem;
                 elem = ElementRef::wrap(p.unwrap()).unwrap();

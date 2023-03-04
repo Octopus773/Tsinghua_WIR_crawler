@@ -47,7 +47,7 @@ pub async fn save_site_as_file(url: &str, filename: &str, auto_filetype: bool) {
         .get(url)
         .header(USER_AGENT, APP_USER_AGENT)
         .header(ACCEPT_LANGUAGE, APP_ACCEPT_LANGUAGE)
-        .timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(20))
         .send()
         .await;
 
