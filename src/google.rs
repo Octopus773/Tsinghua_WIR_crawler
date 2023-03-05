@@ -45,7 +45,7 @@ impl SearchEngine for Google {
             };
 
             while elem.select(&Selector::parse("a h3").unwrap()).count() <= 1
-                && elem.text().fold(0, |acc, a| acc + a.len()) < 600
+                && elem.text().fold(0, |acc, a| acc + a.len()) < 700
             {
                 let p = elem.parent();
                 prev_elem = elem;
@@ -56,7 +56,7 @@ impl SearchEngine for Google {
             Some(SearchResult {
                 title: x.text().collect::<Vec<_>>().join(""),
                 url,
-                description: Some(Google::get_description(texts)),
+                description: Google::get_description(texts),
             })
         });
 
@@ -105,7 +105,7 @@ fn is_starting_translate_this_page(text: &str) -> bool {
 }
 
 impl Google {
-    fn get_description(texts: Vec<&str>) -> String {
+    fn get_description(texts: Vec<&str>) -> Option<String> {
         // first text is the title
         let texts = &texts[1..];
         let mut description = String::new();
@@ -141,7 +141,10 @@ impl Google {
             }
             description.push_str(text);
         }
-        description
+        if description.is_empty() {
+            return None;
+        }
+        Some(description)
     }
 
     fn get_target_url(url: &str) -> Option<String> {
