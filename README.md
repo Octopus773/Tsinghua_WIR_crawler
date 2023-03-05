@@ -10,6 +10,20 @@ Libraries used are:
 - Scraper (HTML parsing and selection)
 - Serde (JSON serialization and deserialization)
 
+Stdout output:
+```
+Results from Bing, 10:
+=========================
+
+Title: "A practical guide to async in Rust - LogRocket Blog"
+Url: "https://blog.logrocket.com/a-practical-guide-to-async-in-rust/"
+Description: "Jun 25, 2020\u{a0}· Rust targets everything from bare-metal, embedded devices to programs running on advanced operating systems and, …"
+
+Title: "rust - What does 'Zero Cost Abstraction' mean? - Stack …"
+Url: "https://stackoverflow.com/questions/69178380/what-does-zero-cost-abstraction-mean"
+Description: "Sep 13, 2021\u{a0}· Zero Cost Abstractions means adding higher-level programming concepts, like generics, collections and so on do not come with a run-time cost, only compile …"
+```
+
 ### How to run
 
 To run the project, you need to have Rust installed on your machine.
